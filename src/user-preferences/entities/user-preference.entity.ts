@@ -21,7 +21,7 @@ export class UserPreference {
     @Column({ nullable: false, type: "float" })
     lng: number;
 
-    @Column({ nullable: false, type: 'enum', enum: AllergenType })
+    @Column({ nullable: false, type: 'enum', enum: AllergenType, array: true })
     sensitiveTo: AllergenType[];
 
     @Column({ nullable: false, type: 'time' })
