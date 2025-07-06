@@ -1,7 +1,7 @@
 import { ArgumentMetadata, HttpException, HttpStatus, Injectable, PipeTransform } from "@nestjs/common";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
-import { createNotSuccessfulResponse } from "shared/utilities/createResponse";
+import { createNotSuccessfulResponse } from "../../shared/utilities/createResponse";
 
 @Injectable()
 export class CustomValidationPipe implements PipeTransform {

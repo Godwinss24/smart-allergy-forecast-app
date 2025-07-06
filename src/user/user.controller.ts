@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpC
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { createNotSuccessfulResponse } from 'shared/utilities/createResponse';
+import { createNotSuccessfulResponse } from '../shared/utilities/createResponse';
 import { LoginDto } from './dto/login-user.dto';
 import { JwtGuard } from 'src/auth/jwt.guard';
 

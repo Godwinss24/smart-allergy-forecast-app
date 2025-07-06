@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { JsonWebTokenError, JwtService, TokenExpiredError } from "@nestjs/jwt";
-import { UserRole } from "shared/enums/UserRole";
-import { CustomRequest } from "shared/interfaces/CustomRequest";
-import { createNotSuccessfulResponse } from "shared/utilities/createResponse";
+import { UserRole } from "../shared/enums/UserRole";
+import { CustomRequest } from "../shared/interfaces/CustomRequest";
+import { createNotSuccessfulResponse } from "../shared/utilities/createResponse";
 
 @Injectable()
 export class JwtGuard implements CanActivate {
