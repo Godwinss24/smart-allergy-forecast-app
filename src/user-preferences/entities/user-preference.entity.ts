@@ -1,5 +1,6 @@
 import { AllergenType } from "src/shared/enums/AllergenType";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { User } from "src/user/entities/user.entity";
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class UserPreference {
@@ -7,15 +8,22 @@ export class UserPreference {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ nullable: false, type: "float" })
-    lat: string;
+    @OneToOne(() => User, (user) => user.preferences)
+    @JoinColumn()
+    user: User;
+
+    @Column()
+    userId: string;
 
     @Column({ nullable: false, type: "float" })
-    lng: string;
+    lat: number;
+
+    @Column({ nullable: false, type: "float" })
+    lng: number;
 
     @Column({ nullable: false, type: 'enum', enum: AllergenType })
-    sensitiveTo: AllergenType;
+    sensitiveTo: AllergenType[];
 
-    @Column({ nullable: false, type: 'timestamp' })
-    timeToAlert: Date;
+    @Column({ nullable: false, type: 'time' })
+    timeToAlert: string;
 }

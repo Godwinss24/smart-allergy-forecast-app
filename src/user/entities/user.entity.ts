@@ -1,6 +1,7 @@
 import { Exclude } from "class-transformer";
 import { UserRole } from "../../shared/enums/UserRole";
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { UserPreference } from "src/user-preferences/entities/user-preference.entity";
 
 @Entity()
 export class User {
@@ -19,10 +20,13 @@ export class User {
     firstName: string;
 
     @Column({ nullable: false, enum: UserRole, default: UserRole.USER })
-    role: UserRole
+    role: UserRole;
 
     @Column({ nullable: true })
     lastName: string;
+
+    @OneToOne(() => UserPreference, (user_preference) => user_preference.user, { onDelete: "CASCADE"})
+    preferences: UserPreference;
 
     @CreateDateColumn()
     createdAt: string;
