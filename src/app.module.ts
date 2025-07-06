@@ -3,18 +3,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
-import * as dotenv from 'dotenv';
-dotenv.config();
-
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import config from './dbconfig/dbconfig';
 @Module({
-  imports: [UserModule, TypeOrmModule.forRoot({
-    url: process.env.DATABASE_URL,
-    entities: [User],
-    type: 'postgres',
-    synchronize: true
-  }), AuthModule],
+  imports: [UserModule, TypeOrmModule.forRootAsync({
+    useFactory: config
+  }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    }),
+    AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
