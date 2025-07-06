@@ -1,4 +1,5 @@
-import { UserRole } from "shared/enums/UserRole";
+import { Exclude } from "class-transformer";
+import { UserRole } from "../../shared/enums/UserRole";
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 @Entity()
@@ -10,6 +11,7 @@ export class User {
     @Column({ nullable: false })
     email: string;
 
+    @Exclude()
     @Column({ nullable: false })
     password: string;
 

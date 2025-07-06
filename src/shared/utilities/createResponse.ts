@@ -1,4 +1,4 @@
-import { aResponse } from "shared/interfaces/aResponse";
+import { aResponse } from "../interfaces/aResponse";
 
 export function createResponse<T>(successful: boolean, data: T, message: string): aResponse<T> {
     return {

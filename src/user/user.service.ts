@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { createNotSuccessfulResponse, createResponse } from 'shared/utilities/createResponse';
+import { createNotSuccessfulResponse, createResponse } from 'src/shared/utilities/createResponse';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login-user.dto';
 import { JwtService } from '@nestjs/jwt';

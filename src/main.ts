@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
-import { CustomValidationPipe } from 'shared/pipes/validationPipe';
+import { CustomValidationPipe } from './shared/pipes/validationPipe';
 dotenv.config();
 
 async function bootstrap() {
