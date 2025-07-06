@@ -5,6 +5,7 @@ import { UserModule } from './user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserPreferencesModule } from './user-preferences/user-preferences.module';
 import config from './dbconfig/dbconfig';
 @Module({
   imports: [UserModule, TypeOrmModule.forRootAsync({
@@ -14,7 +15,8 @@ import config from './dbconfig/dbconfig';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
-    AuthModule],
+    AuthModule,
+    UserPreferencesModule],
   controllers: [AppController],
   providers: [AppService],
 })
