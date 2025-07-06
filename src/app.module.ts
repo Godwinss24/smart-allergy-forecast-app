@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserPreferencesModule } from './user-preferences/user-preferences.module';
 import { PollenForecastsModule } from './pollen-forecasts/pollen-forecasts.module';
 import config from './dbconfig/dbconfig';
+
 @Module({
   imports: [UserModule, TypeOrmModule.forRootAsync({
     useFactory: config
