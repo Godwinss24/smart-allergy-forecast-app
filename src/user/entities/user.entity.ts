@@ -1,3 +1,4 @@
+import { UserRole } from "shared/enums/UserRole";
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 @Entity()
@@ -14,6 +15,9 @@ export class User {
 
     @Column({ nullable: true })
     firstName: string;
+
+    @Column({ nullable: false, enum: UserRole, default: UserRole.USER })
+    role: UserRole
 
     @Column({ nullable: true })
     lastName: string;
