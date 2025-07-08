@@ -1,21 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { PollenForecastsService } from './pollen-forecasts.service';
 import { CreatePollenForecastDto } from './dto/create-pollen-forecast.dto';
 import { UpdatePollenForecastDto } from './dto/update-pollen-forecast.dto';
+import { JwtGuard } from 'src/auth/jwt.guard';
 
 @Controller('pollen-forecasts')
 export class PollenForecastsController {
-  constructor(private readonly pollenForecastsService: PollenForecastsService) {}
+  constructor(private readonly pollenForecastsService: PollenForecastsService) { }
 
-  @Post()
-  create(@Body() createPollenForecastDto: CreatePollenForecastDto) {
-    return this.pollenForecastsService.create(createPollenForecastDto);
-  }
+  // @Post()
+  // create(@Body() createPollenForecastDto: CreatePollenForecastDto) {
+  //   return this.pollenForecastsService.create(createPollenForecastDto);
+  // }
 
-  @Get()
-  findAll() {
-    return this.pollenForecastsService.findAll();
-  }
+
+  // @Get()
+  // async findAll(@Query('lat') lat: number, @Query('lng') lng: number) {
+  //   return this.pollenForecastsService.fetchAndStoreForecast(lat, lng);
+  // }
 
   @Get(':id')
   findOne(@Param('id') id: string) {

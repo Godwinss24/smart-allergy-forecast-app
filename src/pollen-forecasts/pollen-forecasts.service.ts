@@ -5,8 +5,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PollenForecast } from './entities/pollen-forecast.entity';
 import { Repository } from 'typeorm';
 import { PollenLevel, WeatherData, WeatherResponse } from 'src/shared/interfaces/pollen';
-import { createNotSuccessfulResponse } from 'src/shared/utilities/createResponse';
+import { createNotSuccessfulResponse, createResponse } from 'src/shared/utilities/createResponse';
 import { PollenStatus } from 'src/shared/enums/PollenStatus';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { UserService } from 'src/user/user.service';
+import { UserPreference } from 'src/user-preferences/entities/user-preference.entity';
+import { UserPreferencesService } from 'src/user-preferences/user-preferences.service';
 
 @Injectable()
 export class PollenForecastsService {
@@ -14,7 +18,7 @@ export class PollenForecastsService {
   private readonly apiUrl = 'https://api.tomorrow.io/v4/weather/forecast';
 
   constructor(@InjectRepository(PollenForecast)
-  private pollenRepo: Repository<PollenForecast>,) {
+  private pollenRepo: Repository<PollenForecast>, private userPreferenceService: UserPreferencesService) {
 
   }
 
@@ -23,7 +27,7 @@ export class PollenForecastsService {
     return this.pollenRepo.save(newForecast);
   }
 
-  findAll() {
+  findAllPreferences() {
     return `This action returns all pollenForecasts`;
   }
 
@@ -68,6 +72,7 @@ export class PollenForecastsService {
       const response = await fetch(url);
 
       if (!response.ok) {
+        console.log(response)
         return null;
       };
 
@@ -80,42 +85,57 @@ export class PollenForecastsService {
     }
   };
 
-  async fetchAndStoreForecast(lat: number, lng: number): Promise<void> {
+  @Cron(CronExpression.EVERY_MINUTE, { waitForCompletion: true })
+  async fetchAndStoreForecastForEachUser() {
     try {
-      const forecast = await this.getForecasts(lat, lng);
 
-      if (!forecast) {
-        throw new HttpException(createNotSuccessfulResponse("Unable to fetch forecasts"), HttpStatus.NOT_FOUND);
-      };
+      const users = await this.userPreferenceService.findAllPreferences();
 
-      for (const day of forecast.timelines.daily) {
-        const values = day.values;
-        const weather: WeatherData = {
-          temperatureAvg: values.temperatureAvg,
-          windSpeedAvg: values.windSpeedAvg,
-          rainAccumulation: values.rainAccumulationSum ?? 0,
-          humidityAvg: values.humidityAvg,
-          uvIndexMax: values.uvIndexMax,
+      for (const user of users) {
+        console.log(user.userId)
+        const forecast = await this.getForecasts(user.lat, user.lng);
+
+        if (!forecast) {
+          throw new HttpException(createNotSuccessfulResponse("Unable to fetch forecasts"), HttpStatus.NOT_FOUND);
         };
 
-        const levels = this.estimatePollenLevels(weather);
+        for (const day of forecast.timelines.daily) {
+          const values = day.values;
+          const weather: WeatherData = {
+            temperatureAvg: values.temperatureAvg,
+            windSpeedAvg: values.windSpeedAvg,
+            rainAccumulation: values.rainAccumulationSum ?? 0,
+            humidityAvg: values.humidityAvg,
+            uvIndexMax: values.uvIndexMax,
+          };
 
-        const createForecastDto: CreatePollenForecastDto = {
-          lat,
-          lng,
-          date: day.time,
-          tree_pollen: levels.tree,
-          grass_pollen: levels.grass,
-          weed_pollen: levels.weed,
-        };
+          const levels = this.estimatePollenLevels(weather);
 
-        const newForecast = await this.createForecast(createForecastDto);
-        
+          const createForecastDto: CreatePollenForecastDto = {
+            lat:user.lat,
+            lng: user.lng,
+            date: day.time,
+            tree_pollen: levels.tree,
+            grass_pollen: levels.grass,
+            weed_pollen: levels.weed,
+          };
+
+          const newForecast = await this.createForecast(createForecastDto);
+
+        }
       }
 
 
+      return createResponse(true, null, "Forecasts fetched")
     } catch (error) {
       console.log(error)
+      if (error instanceof HttpException) {
+        throw error
+      }
+
+      throw new HttpException(createNotSuccessfulResponse("Unable to fetch forecasts"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
-  }
+  };
+  
+
 }

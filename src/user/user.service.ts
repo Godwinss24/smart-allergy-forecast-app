@@ -20,8 +20,8 @@ export class UserService {
     return await this.userRepo.save(newUser);
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAllUsers() {
+    return await this.userRepo.find();
   }
 
   async findOneUser(userId: string) {
