@@ -22,8 +22,8 @@ export class UserPreferencesService {
     return await this.preferenceRepo.save(newPreferences);
   }
 
-  findAll() {
-    return `This action returns all userPreferences`;
+  async findAllPreferences() {
+    return await this.preferenceRepo.find();
   }
 
   async findOnePreference(id: string) {
