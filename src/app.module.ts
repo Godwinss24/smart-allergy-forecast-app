@@ -19,9 +19,7 @@ import { AlertModule } from './alert/alert.module';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
-    ScheduleModule.forRoot({
-      
-    }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserPreferencesModule,
     PollenForecastsModule,
