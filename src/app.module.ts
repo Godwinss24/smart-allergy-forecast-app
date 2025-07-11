@@ -9,6 +9,7 @@ import { UserPreferencesModule } from './user-preferences/user-preferences.modul
 import { PollenForecastsModule } from './pollen-forecasts/pollen-forecasts.module';
 import config from './dbconfig/dbconfig';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AlertModule } from './alert/alert.module';
 
 @Module({
   imports: [UserModule, TypeOrmModule.forRootAsync({
@@ -18,12 +19,11 @@ import { ScheduleModule } from '@nestjs/schedule';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
-    ScheduleModule.forRoot({
-      
-    }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserPreferencesModule,
-    PollenForecastsModule],
+    PollenForecastsModule,
+    AlertModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -5,11 +5,13 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { createNotSuccessfulResponse } from '../shared/utilities/createResponse';
 import { LoginDto } from './dto/login-user.dto';
 import { JwtGuard } from 'src/auth/jwt.guard';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
+  @ApiOperation({ summary: "Signs up the user", description: "Provide the user's email, password and names to create a user" })
   @UseInterceptors(ClassSerializerInterceptor)
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
@@ -28,6 +30,7 @@ export class UserController {
     }
   };
 
+  @ApiOperation({ summary: "Login ", description: "Provide the user's email, password to get JWT" })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() loginDto: LoginDto) {

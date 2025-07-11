@@ -75,7 +75,7 @@ export class UserPreferencesService {
     }
   }
 
-  async retrievePreferences(userId: string) {
+  async retrievePreference(userId: string) {
     try {
       const user = await this.userService.findOneUser(userId);
 

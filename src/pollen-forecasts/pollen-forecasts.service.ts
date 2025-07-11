@@ -11,6 +11,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { UserService } from 'src/user/user.service';
 import { UserPreference } from 'src/user-preferences/entities/user-preference.entity';
 import { UserPreferencesService } from 'src/user-preferences/user-preferences.service';
+import { AllergenType } from 'src/shared/enums/AllergenType';
+import { CreateAlertDto } from 'src/alert/dto/create-alert.dto';
+import { defaultAlertMessages } from 'src/alert/dto/defaultMessages';
+import { AlertService } from 'src/alert/alert.service';
 
 @Injectable()
 export class PollenForecastsService {
@@ -18,7 +22,9 @@ export class PollenForecastsService {
   private readonly apiUrl = 'https://api.tomorrow.io/v4/weather/forecast';
 
   constructor(@InjectRepository(PollenForecast)
-  private pollenRepo: Repository<PollenForecast>, private userPreferenceService: UserPreferencesService) {
+  private pollenRepo: Repository<PollenForecast>, private userPreferenceService: UserPreferencesService,
+    private alertService: AlertService
+  ) {
 
   }
 
@@ -85,22 +91,45 @@ export class PollenForecastsService {
     }
   };
 
-  @Cron(CronExpression.EVERY_MINUTE, { waitForCompletion: true })
+  private generateAlertIfSensitive(user: UserPreference, pollenType: AllergenType, level: PollenStatus) {
+    if ((level === PollenStatus.HIGH || level === PollenStatus.MODERATE) &&
+      user.sensitiveTo.includes(pollenType)) {
+
+      const createAlertDto: CreateAlertDto = {
+        message: defaultAlertMessages[pollenType][level],
+        risk_level: level
+      };
+
+      return this.alertService.createAlert(user.userId, createAlertDto);
+    }
+  };
+
+
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, { waitForCompletion: true })
   async fetchAndStoreForecastForEachUser() {
     try {
-
+      // 🔍 STEP 1: Get all users who have allergy preferences
       const users = await this.userPreferenceService.findAllPreferences();
 
       for (const user of users) {
-        console.log(user.userId)
+        console.log(user.userId); // Debug: log current user ID being processed
+
+        // 🌦 STEP 2: Fetch weather forecast data for the user’s location (lat/lng)
         const forecast = await this.getForecasts(user.lat, user.lng);
 
+        // 🔥 Fail early if forecast is missing (e.g., API down)
         if (!forecast) {
-          throw new HttpException(createNotSuccessfulResponse("Unable to fetch forecasts"), HttpStatus.NOT_FOUND);
-        };
+          throw new HttpException(
+            createNotSuccessfulResponse("Unable to fetch forecasts"),
+            HttpStatus.NOT_FOUND
+          );
+        }
 
+        // 📆 STEP 3: Loop through each day in the forecast timeline
         for (const day of forecast.timelines.daily) {
           const values = day.values;
+
+          // 🧪 STEP 4: Extract relevant weather data needed for pollen estimation
           const weather: WeatherData = {
             temperatureAvg: values.temperatureAvg,
             windSpeedAvg: values.windSpeedAvg,
@@ -109,10 +138,12 @@ export class PollenForecastsService {
             uvIndexMax: values.uvIndexMax,
           };
 
+          // 🌼 STEP 5: Estimate pollen levels (tree, grass, weed) using weather heuristics
           const levels = this.estimatePollenLevels(weather);
 
+          // 🌍 STEP 6: Prepare DTO to store forecast data in the DB
           const createForecastDto: CreatePollenForecastDto = {
-            lat:user.lat,
+            lat: user.lat,
             lng: user.lng,
             date: day.time,
             tree_pollen: levels.tree,
@@ -120,22 +151,34 @@ export class PollenForecastsService {
             weed_pollen: levels.weed,
           };
 
-          const newForecast = await this.createForecast(createForecastDto);
+          // 🚨 STEP 7: Check if forecast poses a risk based on user's sensitivity.
+          // If yes, generate personalized alert for that allergen type.
+          await this.generateAlertIfSensitive(user, AllergenType.TREE, levels.tree);
+          await this.generateAlertIfSensitive(user, AllergenType.GRASS, levels.grass);
+          await this.generateAlertIfSensitive(user, AllergenType.WEED, levels.weed);
 
+          // 🧾 STEP 8: Store this forecast in the database
+          await this.createForecast(createForecastDto);
         }
       }
 
-
-      return createResponse(true, null, "Forecasts fetched")
+      // ✅ STEP 9: Done. Forecasts and alerts successfully processed for all users.
+      return createResponse(true, null, "Forecasts fetched");
     } catch (error) {
-      console.log(error)
+      console.log(error);
+
       if (error instanceof HttpException) {
-        throw error
+        throw error;
       }
 
-      throw new HttpException(createNotSuccessfulResponse("Unable to fetch forecasts"), HttpStatus.INTERNAL_SERVER_ERROR);
+      // ❌ Unexpected error fallback
+      throw new HttpException(
+        createNotSuccessfulResponse("Unable to fetch forecasts"),
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
-  };
-  
+  }
+
+
 
 }

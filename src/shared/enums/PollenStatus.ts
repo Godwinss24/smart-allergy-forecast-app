@@ -3,3 +3,5 @@ export enum PollenStatus {
     MODERATE = "Moderate",
     HIGH = "High"
 }
+
+export type PollenType = "Low" | "Moderate" | "High";
