@@ -15,6 +15,9 @@ import { AllergenType } from 'src/shared/enums/AllergenType';
 import { CreateAlertDto } from 'src/alert/dto/create-alert.dto';
 import { defaultAlertMessages } from 'src/alert/dto/defaultMessages';
 import { AlertService } from 'src/alert/alert.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class PollenForecastsService {
@@ -23,10 +26,8 @@ export class PollenForecastsService {
 
   constructor(@InjectRepository(PollenForecast)
   private pollenRepo: Repository<PollenForecast>, private userPreferenceService: UserPreferencesService,
-    private alertService: AlertService
-  ) {
-
-  }
+    private alertService: AlertService, @InjectQueue('fetch-forecasts') private queue: Queue
+  ) { }
 
   async createForecast(createPollenForecastDto: CreatePollenForecastDto) {
     const newForecast = this.pollenRepo.create(createPollenForecastDto);
@@ -104,62 +105,66 @@ export class PollenForecastsService {
     }
   };
 
+  async fetchForecasts(user: UserPreference) {
+    await this.queue.add("get-forecasts", user, { jobId: user.userId });
+  }
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM, { waitForCompletion: true })
+  @Cron(CronExpression.EVERY_10_SECONDS, { waitForCompletion: true })
   async fetchAndStoreForecastForEachUser() {
     try {
       // 🔍 STEP 1: Get all users who have allergy preferences
       const users = await this.userPreferenceService.findAllPreferences();
 
       for (const user of users) {
-        console.log(user.userId); // Debug: log current user ID being processed
+        // console.log(user.userId); // Debug: log current user ID being processed
 
-        // 🌦 STEP 2: Fetch weather forecast data for the user’s location (lat/lng)
-        const forecast = await this.getForecasts(user.lat, user.lng);
+        // // 🌦 STEP 2: Fetch weather forecast data for the user’s location (lat/lng)
+        // const forecast = await this.getForecasts(user.lat, user.lng);
 
-        // 🔥 Fail early if forecast is missing (e.g., API down)
-        if (!forecast) {
-          throw new HttpException(
-            createNotSuccessfulResponse("Unable to fetch forecasts"),
-            HttpStatus.NOT_FOUND
-          );
-        }
+        // // 🔥 Fail early if forecast is missing (e.g., API down)
+        // if (!forecast) {
+        //   throw new HttpException(
+        //     createNotSuccessfulResponse("Unable to fetch forecasts"),
+        //     HttpStatus.NOT_FOUND
+        //   );
+        // }
 
-        // 📆 STEP 3: Loop through each day in the forecast timeline
-        for (const day of forecast.timelines.daily) {
-          const values = day.values;
+        // // 📆 STEP 3: Loop through each day in the forecast timeline
+        // for (const day of forecast.timelines.daily) {
+        //   const values = day.values;
 
-          // 🧪 STEP 4: Extract relevant weather data needed for pollen estimation
-          const weather: WeatherData = {
-            temperatureAvg: values.temperatureAvg,
-            windSpeedAvg: values.windSpeedAvg,
-            rainAccumulation: values.rainAccumulationSum ?? 0,
-            humidityAvg: values.humidityAvg,
-            uvIndexMax: values.uvIndexMax,
-          };
+        //   // 🧪 STEP 4: Extract relevant weather data needed for pollen estimation
+        //   const weather: WeatherData = {
+        //     temperatureAvg: values.temperatureAvg,
+        //     windSpeedAvg: values.windSpeedAvg,
+        //     rainAccumulation: values.rainAccumulationSum ?? 0,
+        //     humidityAvg: values.humidityAvg,
+        //     uvIndexMax: values.uvIndexMax,
+        //   };
 
-          // 🌼 STEP 5: Estimate pollen levels (tree, grass, weed) using weather heuristics
-          const levels = this.estimatePollenLevels(weather);
+        //   // 🌼 STEP 5: Estimate pollen levels (tree, grass, weed) using weather heuristics
+        //   const levels = this.estimatePollenLevels(weather);
 
-          // 🌍 STEP 6: Prepare DTO to store forecast data in the DB
-          const createForecastDto: CreatePollenForecastDto = {
-            lat: user.lat,
-            lng: user.lng,
-            date: day.time,
-            tree_pollen: levels.tree,
-            grass_pollen: levels.grass,
-            weed_pollen: levels.weed,
-          };
+        //   // 🌍 STEP 6: Prepare DTO to store forecast data in the DB
+        //   const createForecastDto: CreatePollenForecastDto = {
+        //     lat: user.lat,
+        //     lng: user.lng,
+        //     date: day.time,
+        //     tree_pollen: levels.tree,
+        //     grass_pollen: levels.grass,
+        //     weed_pollen: levels.weed,
+        //   };
 
-          // 🚨 STEP 7: Check if forecast poses a risk based on user's sensitivity.
-          // If yes, generate personalized alert for that allergen type.
-          await this.generateAlertIfSensitive(user, AllergenType.TREE, levels.tree);
-          await this.generateAlertIfSensitive(user, AllergenType.GRASS, levels.grass);
-          await this.generateAlertIfSensitive(user, AllergenType.WEED, levels.weed);
+        //   // 🚨 STEP 7: Check if forecast poses a risk based on user's sensitivity.
+        //   // If yes, generate personalized alert for that allergen type.
+        //   await this.generateAlertIfSensitive(user, AllergenType.TREE, levels.tree);
+        //   await this.generateAlertIfSensitive(user, AllergenType.GRASS, levels.grass);
+        //   await this.generateAlertIfSensitive(user, AllergenType.WEED, levels.weed);
 
-          // 🧾 STEP 8: Store this forecast in the database
-          await this.createForecast(createForecastDto);
-        }
+        //   // 🧾 STEP 8: Store this forecast in the database
+        //   await this.createForecast(createForecastDto);
+        // }
+        await this.fetchForecasts(user);
       }
 
       // ✅ STEP 9: Done. Forecasts and alerts successfully processed for all users.

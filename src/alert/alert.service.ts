@@ -168,12 +168,12 @@ export class AlertService {
               date: dateStr,
               riskLevel: curr.risk_level
             });
-          }
+          };
 
           // Count high-risk alerts
           if (curr.risk_level === 'High') {
             acc.highRiskDays += 1;
-          }
+          };
 
           return acc;
         },
