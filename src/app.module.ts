@@ -10,6 +10,8 @@ import { PollenForecastsModule } from './pollen-forecasts/pollen-forecasts.modul
 import config from './dbconfig/dbconfig';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AlertModule } from './alert/alert.module';
+import { BullModule } from '@nestjs/bullmq';
+import { QueuesModule } from './queues/queues.module';
 
 @Module({
   imports: [UserModule, TypeOrmModule.forRootAsync({
@@ -19,11 +21,24 @@ import { AlertModule } from './alert/alert.module';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        return {
+          connection: {
+            host: configService.get<string>('REDIS_HOST'),
+            port: configService.get<number>('REDIS_PORT'),
+          }
+        }
+      }
+    }),
     ScheduleModule.forRoot(),
     AuthModule,
     UserPreferencesModule,
     PollenForecastsModule,
-    AlertModule],
+    AlertModule,
+    QueuesModule],
   controllers: [AppController],
   providers: [AppService],
 })
