@@ -50,7 +50,16 @@ export class PollenForecastsService {
     return `This action removes a #${id} pollenForecast`;
   };
 
-  private estimatePollenLevels(weather: WeatherData) {
+  /**
+   * This method estimates pollen levels based on weather data.
+   * 
+   * @param weather the weather data object containing average temperature, wind speed, rain accumulation, humidity, and UV index.
+   * 
+   * @example estimatePollenLevels({  temperatureAvg: 25, windSpeedAvg: 4, rainAccumulation: 0, humidityAvg: 50, uvIndexMax: 7 });
+   * 
+   * @returns a PollenLevel object containing estimated pollen levels for tree, grass, and weed. e.g (tree: PollenStatus.HIGH, grass: PollenStatus.MODERATE, weed: PollenStatus.LOW)
+   */
+  estimatePollenLevels(weather: WeatherData) {
     const { temperatureAvg, windSpeedAvg, rainAccumulation, humidityAvg, uvIndexMax } = weather;
 
     const dry = rainAccumulation === 0;
@@ -92,7 +101,14 @@ export class PollenForecastsService {
     }
   };
 
-  private generateAlertIfSensitive(user: UserPreference, pollenType: AllergenType, level: PollenStatus) {
+  /**
+   * This method generates an alert for a user if they are sensitive to a specific pollen type and the pollen level is high or moderate.
+   * @param user the user preference object containing the user's sensitivity information.
+   * @param pollenType the type of pollen (tree, grass, or weed) to check against the user's sensitivity.
+   * @param level the pollen level to check against the user's sensitivity. e.g PollenStatus.HIGH or PollenStatus.MODERATE.
+   * @returns it returns a promise that resolves to the created alert or undefined if no alert was generated.
+   */
+   generateAlertIfSensitive(user: UserPreference, pollenType: AllergenType, level: PollenStatus) {
     if ((level === PollenStatus.HIGH || level === PollenStatus.MODERATE) &&
       user.sensitiveTo.includes(pollenType)) {
 
@@ -105,69 +121,43 @@ export class PollenForecastsService {
     }
   };
 
+  /**
+   * Adds a job to the BullMQ queue to fetch forecasts for a user.
+   * 
+   * Check the queue service for the job processing logic.
+   * 
+   * @param user the user preference object containing the user's location.
+   */
   async fetchForecasts(user: UserPreference) {
-    await this.queue.add("get-forecasts", user, { jobId: user.userId });
+    const date = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
+    console.log(`Adding job to fetch forecasts for user: ${user.userId}`);
+    await this.queue.add("get-forecasts", user, { jobId: `${user.userId}-${date}` });
   }
 
-  @Cron(CronExpression.EVERY_10_SECONDS, { waitForCompletion: true })
+  @Cron(CronExpression.EVERY_DAY_AT_7PM)
   async fetchAndStoreForecastForEachUser() {
+
+    console.log("Fetching forecasts for all users...");
     try {
       // 🔍 STEP 1: Get all users who have allergy preferences
       const users = await this.userPreferenceService.findAllPreferences();
 
+      if (!users || users.length === 0) {
+        // ❌ No users found with preferences
+        return createResponse(false, null, "No users with preferences found");
+      };
+
+      /**
+       * For each user, we will:
+       * add a job to the BullMQ queue to fetch their forecasts.
+       */
       for (const user of users) {
-        // console.log(user.userId); // Debug: log current user ID being processed
-
-        // // 🌦 STEP 2: Fetch weather forecast data for the user’s location (lat/lng)
-        // const forecast = await this.getForecasts(user.lat, user.lng);
-
-        // // 🔥 Fail early if forecast is missing (e.g., API down)
-        // if (!forecast) {
-        //   throw new HttpException(
-        //     createNotSuccessfulResponse("Unable to fetch forecasts"),
-        //     HttpStatus.NOT_FOUND
-        //   );
-        // }
-
-        // // 📆 STEP 3: Loop through each day in the forecast timeline
-        // for (const day of forecast.timelines.daily) {
-        //   const values = day.values;
-
-        //   // 🧪 STEP 4: Extract relevant weather data needed for pollen estimation
-        //   const weather: WeatherData = {
-        //     temperatureAvg: values.temperatureAvg,
-        //     windSpeedAvg: values.windSpeedAvg,
-        //     rainAccumulation: values.rainAccumulationSum ?? 0,
-        //     humidityAvg: values.humidityAvg,
-        //     uvIndexMax: values.uvIndexMax,
-        //   };
-
-        //   // 🌼 STEP 5: Estimate pollen levels (tree, grass, weed) using weather heuristics
-        //   const levels = this.estimatePollenLevels(weather);
-
-        //   // 🌍 STEP 6: Prepare DTO to store forecast data in the DB
-        //   const createForecastDto: CreatePollenForecastDto = {
-        //     lat: user.lat,
-        //     lng: user.lng,
-        //     date: day.time,
-        //     tree_pollen: levels.tree,
-        //     grass_pollen: levels.grass,
-        //     weed_pollen: levels.weed,
-        //   };
-
-        //   // 🚨 STEP 7: Check if forecast poses a risk based on user's sensitivity.
-        //   // If yes, generate personalized alert for that allergen type.
-        //   await this.generateAlertIfSensitive(user, AllergenType.TREE, levels.tree);
-        //   await this.generateAlertIfSensitive(user, AllergenType.GRASS, levels.grass);
-        //   await this.generateAlertIfSensitive(user, AllergenType.WEED, levels.weed);
-
-        //   // 🧾 STEP 8: Store this forecast in the database
-        //   await this.createForecast(createForecastDto);
-        // }
+        console.log(`Fetching forecasts for user: ${user.userId}`);
+        // Add a job to the queue to fetch forecasts for this user
         await this.fetchForecasts(user);
       }
 
-      // ✅ STEP 9: Done. Forecasts and alerts successfully processed for all users.
       return createResponse(true, null, "Forecasts fetched");
     } catch (error) {
       console.log(error);

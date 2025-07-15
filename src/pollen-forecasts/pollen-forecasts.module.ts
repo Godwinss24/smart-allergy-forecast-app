@@ -15,5 +15,6 @@ import { BullModule } from '@nestjs/bullmq';
   ],
   controllers: [PollenForecastsController],
   providers: [PollenForecastsService],
+  exports: [PollenForecastsService]
 })
 export class PollenForecastsModule { }
